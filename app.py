@@ -102,7 +102,6 @@ if len(edited_route) > 0:
     st.header("3. Evacuation Results")
 
     m1, m2, m3, m4 = st.columns(4)
-    # Primary metric is now seconds, secondary metric is minutes
     m1.metric("Required Safe Egress (RSET)", f"{rset_total_sec:.0f} sec", f"{rset_total_sec / 60:.1f} min", delta_color="off")
     m2.metric("Available Safe Egress (ASET)", f"{aset_sec:.0f} sec", f"{aset_sec / 60:.1f} min", delta_color="off")
     
@@ -112,7 +111,7 @@ if len(edited_route) > 0:
 
     st.write("")
 
-    # Timeline Chart (Now in Seconds)
+    # Timeline Chart
     st.subheader("ASET vs RSET Timeline (Seconds)")
     fig = go.Figure()
 
@@ -139,9 +138,7 @@ if len(edited_route) > 0:
 
     # Detailed Table
     st.subheader("Component Breakdown & Queue Times")
-    st.markdown("SFPE methodology assumes the Total Movement Time is the sum of **all walk times** plus the **single longest queue time** (the governing bottleneck).")
     
-    # Apply a quick highlight to the governing row using Pandas styling
     df_results = pd.DataFrame(results_list)
     def highlight_governing(val):
         color = '#d4edda' if val == "✅ YES" else ''
@@ -151,3 +148,44 @@ if len(edited_route) > 0:
 
 else:
     st.warning("Please add at least one component to the egress route.")
+
+# --- Methodology & Equations Expander ---
+st.divider()
+with st.expander("📖 Assumptions, Methodology & SFPE Equations"):
+    st.markdown("""
+    ### SFPE Hydraulic Model Constants
+    This tool uses standard values from the SFPE Handbook of Fire Protection Engineering for conservative egress modeling:
+    
+    * **Doors & Archways**
+      * Walking Speed ($S$): **1.19 m/s**
+      * Specific Flow ($F_s$): **1.32 persons/sec/m** of effective width
+      * Boundary Layer ($BL$): **0.15 m** (applied to each side)
+    * **Corridors**
+      * Walking Speed ($S$): **1.19 m/s**
+      * Specific Flow ($F_s$): **1.32 persons/sec/m** of effective width
+      * Boundary Layer ($BL$): **0.20 m** (applied to each side)
+    * **Stairs (Descending)**
+      * Walking Speed ($S$): **0.85 m/s**
+      * Specific Flow ($F_s$): **1.01 persons/sec/m** of effective width
+      * Boundary Layer ($BL$): **0.15 m** (applied to each side)
+
+    ### Key Equations
+    
+    **1. Effective Width ($W_e$)** People naturally avoid brushing against walls or doorframes. The effective width removes this boundary layer from the total clear width ($W$):
+    $$W_e = W - (2 \\times BL)$$
+    
+    **2. Walking Time ($T_{walk}$)** The time it takes to traverse a component of distance ($D$) at walking speed ($S$):
+    $$T_{walk} = \\frac{D}{S}$$
+    
+    **3. Flow Capacity ($Q$)** The maximum number of people that can pass through the bottleneck per second:
+    $$Q = W_e \\times F_s$$
+    
+    **4. Queue / Flow Time ($T_{flow}$)** The time required for a population ($P$) to squeeze through the bottleneck:
+    $$T_{flow} = \\frac{P}{Q}$$
+    
+    **5. Total Movement Time ($T_{move}$)** Following the conservative SFPE routing method, the total movement time is the sum of **all** walking times along the route, plus the **single longest** queue time (the governing bottleneck):
+    $$T_{move} = \\sum T_{walk} + \\max(T_{flow})$$
+    
+    **6. Required Safe Egress Time (RSET)** The total time required for evacuation includes detection ($T_{detect}$), pre-movement/response ($T_{pre}$), and movement:
+    $$RSET = T_{detect} + T_{pre} + T_{move}$$
+    """)
